@@ -1,0 +1,22 @@
+[server]
+; port
+listen[] = 10000
+
+;app log config file path
+log_cfg_file_path = '/root/fsof_php_core/dubbo-php-framework/demo/demo-provider/config/log4php.xml'
+
+;swoole log path
+swoole_log_path = '/var/fsof/provider/example_swoole.log'
+
+; point to app root path's bootstrap.php
+root = '/root/fsof_php_core/dubbo-php-framework/demo/demo-provider/BootStrap.php'
+
+[setting]
+; worker num
+worker_num = 2
+
+; daemonize
+daemonize = true
+
+;max_request
+max_request = 1

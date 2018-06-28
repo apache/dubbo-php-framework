@@ -1,0 +1,20 @@
+[server]
+; port
+listen[] = 10000
+
+;Provider app log level INFO WARN ERROR
+log_level = INFO
+
+;base service log level INFO WARN ERROR
+bslog_level = INFO
+
+; point to app root path's bootstrap.php 
+root = '../example/provider/src/BootStrap.php'
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+[setting]
+; worker num
+worker_num = 2
+
+; daemonize
+daemonize = true

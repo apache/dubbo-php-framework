@@ -1,0 +1,9 @@
+[service_properties]
+owner = author
+version = 1.0.0
+group = default
+
+[service_providers]
+com.fenqile.example.DemoService[service] = DemoServiceImpl
+com.fenqile.example.DemoService[version] = 1.0.0
+com.fenqile.example.DemoService[group] = default

@@ -1,0 +1,10 @@
+[consumer_config]
+p2p_mode = false
+
+[consumer_services]
+
+com.fenqile.example.DemoService[group] = *
+com.fenqile.example.DemoService[version] = 1.0.0
+
+com.fenqile.arch.dubbo.service.DemoPhpService[group] = *
+com.fenqile.arch.dubbo.service.DemoPhpService[version] = 1.0.0
