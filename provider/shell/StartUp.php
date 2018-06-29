@@ -17,8 +17,14 @@
  */
 namespace com\fenqile\fsof\provider\shell;
 
-require_once('log4php/Logger.php');
 use com\fenqile\fsof\common\config\FSOFConfigManager;
+use com\fenqile\fsof\provider\core\server\TcpServer;
+
+define("BIN_DIR", __DIR__);
+define('MYROOT',BIN_DIR."/../..");
+
+require_once MYROOT . '/vendor/autoload.php';
+require_once MYROOT . '/vendor/apache/log4php/src/main/php/Logger.php';
 
 // 定义provider shell目录
 define('FSOF_PROVIDER_SHELL_PATH', __DIR__);
@@ -56,7 +62,7 @@ if(isset($config['server']['log_cfg_file_path']) && !empty($config['server']['lo
 }
 
 \Logger::getLogger(__CLASS__)->info("input {$cmd} {$name}");
-$server = new \com\fenqile\fsof\provider\core\server\TcpServer($name);
+$server = new TcpServer($name);
 //加载app root目录下的bootstrap.php和provider/$name.provider文件
 $server->setRequire(FSOFConfigManager::getProviderAppRoot($name));
 
