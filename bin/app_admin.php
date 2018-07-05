@@ -17,7 +17,11 @@
  *  limitations under the License.
  */
 
-require_once('log4php/Logger.php');
+define("BIN_DIR", __DIR__);
+define('MYROOT',BIN_DIR."/..");
+
+require_once MYROOT . '/vendor/autoload.php';
+require_once MYROOT . '/vendor/apache/log4php/src/main/php/Logger.php';
 
 use com\fenqile\fsof\common\config\FSOFConfigManager;
 
