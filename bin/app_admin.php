@@ -92,11 +92,14 @@ else
     echo "--------app_admin.php $cmd--------".PHP_EOL;
 }
 
-$config = FSOFConfigManager::getProviderAppDeploy($name);
-if(isset($config['server']['log_cfg_file_path']) && !empty($config['server']['log_cfg_file_path']))
+if (!empty($name))
 {
-    \Logger::configure($config['server']['log_cfg_file_path']);
-    date_default_timezone_set('PRC');
+	$config = FSOFConfigManager::getProviderAppDeploy($name);
+	if(isset($config['server']['log_cfg_file_path']) && !empty($config['server']['log_cfg_file_path']))
+	{
+		\Logger::configure($config['server']['log_cfg_file_path']);
+		date_default_timezone_set('PRC');
+	}
 }
 
 //执行所有的控制命令
