@@ -3,7 +3,7 @@
 
 <font size=3 face="Segoe UI">dubbo-php-framework is a RPC communication framework for PHP language. It is fully compatible with Dubbo protocol, and can be used as provider terminal and consumer terminal simultaneously. Using zookeeper for service registration discovery, and using fastjson for Serialization.</font>
 
-![alt][img1]
+![image](https://github.com/lexin-fintech/dubbo-php-framework/blob/master/arch.png)
 
 ## <font size=5>Introduction</font>
 - <font size=3 face="Segoe UI">php provider runs in multiple processes. The worker process is used to process specific business, the manager process controls the lifecycle of the worker process, and the master process processes the network IO.</font>
@@ -13,4 +13,4 @@
 
 <a href="http://www.w3school.com.cn">Quick start</a>
 
-![image](https://github.com/lexin-fintech/dubbo-php-framework/blob/master/arch.png)
+
