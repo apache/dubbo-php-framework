@@ -1,13 +1,16 @@
-# dubbo-php-framework
-dubbo-php-framework是一个用于php语言的RPC通讯框架，与dubbo在协议上完全兼容，可同时作为provider端和consumer端,使用zookeeper用于服务注册发现,序列化使用fastjson.
+## <font size=6>dubbo-php-framework</font>
+
+
+<font size=3 face="Segoe UI">dubbo-php-framework is a RPC communication framework for PHP language. It is fully compatible with Dubbo protocol, and can be used as provider terminal and consumer terminal simultaneously. Using zookeeper for service registration discovery, and using fastjson for Serialization.</font>
 
 ![image](https://github.com/lexin-fintech/dubbo-php-framework/blob/master/arch.png)
 
-## 说明
-* php provider以多进程方式运行，其中worker进程用于处理具体业务，manager进程控制worker进程的生命周期，master进程处理网络IO.
-* agent监听registry中provider地址信息的变更并同步到本地redis，供本机上所有php consumer共享.
-* php consumer、redis、agent三者部署在所有consumer机器上，并且彼此以unix socket通信.
-* provider_admin部署在所有provider机器上，用于控制该机器上所有php provider的生命周期.
+## <font size=5>Introduction</font>
+- <font size=3 face="Segoe UI">php provider runs in multiple processes. The worker process is used to process specific business, the manager process controls the lifecycle of the worker process, and the master process processes the network IO.</font>
+- <font size=3 face="Segoe UI">Agent monitors the change of provider address information in registry and synchronizes them to local redis for all php consumers on the machine to share.</font>
+- <font size=3 face="Segoe UI">php consumer、redis and agent are deployed on all consumer machines and communicate with each other on unix socket.</font>
+- <font size=3 face="Segoe UI">provider_admin is deployed on all provider machines to control the lifecycle of all php providers on that machine.</font>
+
+<a href="http://www.w3school.com.cn">Quick start</a>
 
 
-[Quick start](https://github.com/lexin-fintech/dubbo-php-framework/wiki/Quick-Start)
