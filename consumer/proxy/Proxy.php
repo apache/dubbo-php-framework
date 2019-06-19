@@ -19,7 +19,7 @@ namespace com\fenqile\fsof\consumer\proxy;
 
 use com\fenqile\fsof\common\protocol\fsof\DubboRequest;
 use com\fenqile\fsof\consumer\fsof\FSOFProcessor;
-
+use com\fenqile\fsof\consumer\Type;
 
 final class Proxy
 {
@@ -81,12 +81,14 @@ final class Proxy
         return $rand_number;
     }
 
-    protected function generateParamType($num)
+    protected function generateParamType($args)
     {
-        $types = array();
-        for($i = 0; $i < $num; $i++)
-        {
-            $types[] = 'Ljava/lang/Object;';
+        foreach ($args as $val) {
+            if($val instanceof \stdClass){
+                $types[] = $val->class;
+            }else{
+                $types[] = Type::adapter[$val->type]??'Ljava/lang/Object;';
+            }
         }
         return $types;
     }
@@ -115,7 +117,7 @@ final class Proxy
             $request->setMethod($args[0]);
             array_shift($args);
             $request->setParams($args);
-            $request->setTypes($this->generateParamType(count($request->getParams())));
+            $request->setTypes($this->generateParamType($request->getParams()));
             $result = $this->fsofProcessor->executeRequest($request, $this->serviceAddress, $this->ioTimeOut, $providerAddress);
         }catch (\Exception $e) {
             $cost_time = (int)((microtime(true) - $begin_time) * 1000000);

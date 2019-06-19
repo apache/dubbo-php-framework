@@ -64,8 +64,8 @@ class FSOFProcessor
                 //透传到服务端字段
                 $request->host = $host;
                 $request->port = $port;
-                $request->setGroup($svrUrl->getGroup(FSOFConstants::FSOF_SERVICE_GROUP_ANY));
-                $request->setVersion( $svrUrl->getVersion(FSOFConstants::FSOF_SERVICE_VERSION_DEFAULT));
+                $request->setGroup($svrUrl->getGroup());
+                $request->setVersion( $svrUrl->getVersion());
                 $request->setTimeout($ioTimeOut * 1000);
 
                 $client = $this->connectProvider($host, $port, $ioTimeOut);

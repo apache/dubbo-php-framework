@@ -164,7 +164,7 @@ final class ProxyFactory
         return $ret;         
     }
 
-    public static function getInstance($consumerInterface, $ioTimeOut = 3)
+    public static function getInstance($consumerInterface, $ioTimeOut = 3, $version = null, $group = null)
     {
     	$ret = NULL;
         $route = '';
