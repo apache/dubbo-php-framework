@@ -191,42 +191,61 @@ class DubboParser
 
     public function parseResponseBody(DubboResponse $response)
     {
-        $_data = substr($response->getFullData(), self::PACKAGE_HEDA_LEN);
-        $response->setResponseBody($_data);
         if (DubboResponse::OK == $response->getStatus()) {
             if (self::DUBBO_PROTOCOL_SERIALIZE_FAST_JSON == $response->getSerialization()) {
-                list($status, $content) = explode(PHP_EOL, $_data);
-                switch ($status) {
-                    case self::RESPONSE_NULL_VALUE:
-                        break;
-                    case self::RESPONSE_VALUE:
-                        $response->setResult(json_decode($content, true));
-                        break;
-                    case self::RESPONSE_WITH_EXCEPTION:
-                        $exception = json_decode($content, true);
-                        if (is_array($exception) && array_key_exists('message', $exception)) {
-                            throw new \Exception($exception['message']);
-                        } else if (is_string($exception)) {
-                            throw new \Exception($exception);
-                        } else {
-                            throw new \Exception("provider occur error");
-                        }
-                        break;
-                    default:
-                        return false;
-                }
+                $this->parseResponseBodyForFastjson($response);
             } else if (self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2 == $response->getSerialization()) {
-                $_data = substr($_data, 1);
-                $hess_stream = new \HessianStream($_data);
-                $hess_options = new \HessianOptions();
-                $hess_factory = new \HessianFactory();
-                $parser = $hess_factory->getParser($hess_stream, $hess_options);
-                $content = $parser->parseReply();
-                $response->setResult($content);
+                $this->parseResponseBodyForHessian2($response);
+            } else {
+                throw new \Exception(sprintf('返回的序列化类型:(%s), 不支持解析!', $response->getSerialization()));
             }
         } else {
-            throw new \Exception($_data);
+            throw new \Exception($response->getFullData());
         }
+        return $response;
+    }
+
+    private function parseResponseBodyForFastjson(DubboResponse $response)
+    {
+        $_data = substr($response->getFullData(), self::PACKAGE_HEDA_LEN);
+        $response->setResponseBody($_data);
+        list($status, $content) = explode(PHP_EOL, $_data);
+        if ($response->isHeartbeatEvent()) {
+            $response->setResult(json_decode($status, true));
+        } else {
+            switch ($status) {
+                case self::RESPONSE_NULL_VALUE:
+                    break;
+                case self::RESPONSE_VALUE:
+                    $response->setResult(json_decode($content, true));
+                    break;
+                case self::RESPONSE_WITH_EXCEPTION:
+                    $exception = json_decode($content, true);
+                    if (is_array($exception) && array_key_exists('message', $exception)) {
+                        throw new \Exception($exception['message']);
+                    } else if (is_string($exception)) {
+                        throw new \Exception($exception);
+                    } else {
+                        throw new \Exception("provider occur error");
+                    }
+                    break;
+                default:
+                    return false;
+            }
+        }
+        return $response;
+    }
+
+    private function parseResponseBodyForHessian2(DubboResponse $response)
+    {
+        $_data = substr($response->getFullData(), self::PACKAGE_HEDA_LEN + 1);
+        $response->setResponseBody($_data);
+        $hess_stream = new \HessianStream($_data);
+        $hess_options = new \HessianOptions();
+        $hess_factory = new \HessianFactory();
+        $parser = $hess_factory->getParser($hess_stream, $hess_options);
+        $content = $parser->parseReply();
+        $response->setResult($content);
         return $response;
     }
 
