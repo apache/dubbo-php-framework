@@ -72,10 +72,10 @@ class DubboParser
     public function packRequest(DubboRequest $request)
     {
         if (self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2 == self::DUBBO_PROTOCOL_NAME_MAP_CODE[$request->getSerialization()]) {
-            $reqData = $this->buildHessian2Body($request);
+            $reqData = $this->buildBodyForHessian2($request);
             $serialize_type = self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2;
         } else {
-            $reqData = $this->buildFastJsonBody($request);
+            $reqData = $this->buildBodyForFastJson($request);
             $serialize_type = self::DUBBO_PROTOCOL_SERIALIZE_FAST_JSON;
         }
         $upper = ($request->getSn() & self::UPPER_MASK) >> 32;
@@ -93,7 +93,7 @@ class DubboParser
         return $out . $reqData;
     }
 
-    public function buildFastJsonBody(DubboRequest $request)
+    public function buildBodyForFastJson(DubboRequest $request)
     {
         $reqData = json_encode($request->getDubboVersion()) . PHP_EOL .
             json_encode($request->getService()) . PHP_EOL;
@@ -128,7 +128,7 @@ class DubboParser
 
     }
 
-    public function buildHessian2Body(DubboRequest $request)
+    public function buildBodyForHessian2(DubboRequest $request)
     {
         $hess_stream = new \HessianStream();
         $hess_options = new \HessianOptions();
@@ -193,7 +193,7 @@ class DubboParser
     {
         if (DubboResponse::OK == $response->getStatus()) {
             if (self::DUBBO_PROTOCOL_SERIALIZE_FAST_JSON == $response->getSerialization()) {
-                $this->parseResponseBodyForFastjson($response);
+                $this->parseResponseBodyForFastJson($response);
             } else if (self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2 == $response->getSerialization()) {
                 $this->parseResponseBodyForHessian2($response);
             } else {
@@ -205,7 +205,7 @@ class DubboParser
         return $response;
     }
 
-    private function parseResponseBodyForFastjson(DubboResponse $response)
+    private function parseResponseBodyForFastJson(DubboResponse $response)
     {
         $_data = substr($response->getFullData(), self::PACKAGE_HEDA_LEN);
         $response->setResponseBody($_data);
@@ -238,14 +238,16 @@ class DubboParser
 
     private function parseResponseBodyForHessian2(DubboResponse $response)
     {
-        $_data = substr($response->getFullData(), self::PACKAGE_HEDA_LEN + 1);
-        $response->setResponseBody($_data);
-        $hess_stream = new \HessianStream($_data);
-        $hess_options = new \HessianOptions();
-        $hess_factory = new \HessianFactory();
-        $parser = $hess_factory->getParser($hess_stream, $hess_options);
-        $content = $parser->parseReply();
-        $response->setResult($content);
+        if (!$response->isHeartbeatEvent()) {
+            $_data = substr($response->getFullData(), self::PACKAGE_HEDA_LEN + 1);
+            $response->setResponseBody($_data);
+            $hess_stream = new \HessianStream($_data);
+            $hess_options = new \HessianOptions();
+            $hess_factory = new \HessianFactory();
+            $parser = $hess_factory->getParser($hess_stream, $hess_options);
+            $content = $parser->parseReply();
+            $response->setResult($content);
+        }
         return $response;
     }
 
