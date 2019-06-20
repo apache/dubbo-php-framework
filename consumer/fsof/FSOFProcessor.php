@@ -67,6 +67,7 @@ class FSOFProcessor
                 $request->setGroup($svrUrl->getGroup());
                 $request->setVersion( $svrUrl->getVersion());
                 $request->setTimeout($ioTimeOut * 1000);
+                $request->setSerialization($svrUrl->getSerialization(DubboParser::DUBBO_PROTOCOL_SERIALIZE_FAST_JSON));
 
                 $client = $this->connectProvider($host, $port, $ioTimeOut);
                 if(empty($client))

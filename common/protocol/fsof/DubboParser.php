@@ -3,6 +3,7 @@
 namespace com\fenqile\fsof\common\protocol\fsof;
 
 use com\fenqile\fsof\consumer\Type;
+
 /**
  *
  * Dubbo网络协议
@@ -42,6 +43,11 @@ class DubboParser
 
     const DUBBO_PROTOCOL_SERIALIZE_HESSIAN2 = 2;     //hessian2 serialization code
 
+    const DUBBO_PROTOCOL_NAME_MAP_CODE = [
+        'hessian2' => self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2,
+        'fastjson' => self::DUBBO_PROTOCOL_SERIALIZE_FAST_JSON
+    ];
+
 
     //fsof协议包头cmd字段含义
     const FLAG_REQUEST = 0x80;           //request
@@ -65,44 +71,16 @@ class DubboParser
 
     public function packRequest(DubboRequest $request)
     {
-        $reqData = json_encode($request->getDubboVersion()) . PHP_EOL .
-            json_encode($request->getService()) . PHP_EOL;
-        if($request->getVersion()){
-            $reqData .= json_encode($request->getVersion()) . PHP_EOL;
-        }else{
-            $reqData .= '""' . PHP_EOL;
+        if (self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2 == self::DUBBO_PROTOCOL_NAME_MAP_CODE[$request->getSerialization()]) {
+            $reqData = $this->buildHessian2Body($request);
+            $serialize_type = self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2;
+        } else {
+            $reqData = $this->buildFastJsonBody($request);
+            $serialize_type = self::DUBBO_PROTOCOL_SERIALIZE_FAST_JSON;
         }
-        $reqData .= json_encode($request->getMethod()) . PHP_EOL;
-        $typeStr = "";
-        foreach ($request->getTypes() as $type){
-            $typeStr .= $type;
-        }
-        $reqData .= json_encode($typeStr) . PHP_EOL;
-        foreach ($request->getParams() as $value){
-            if($value instanceof \stdClass){
-                $value = $value->object;
-            }elseif($value instanceof Type){
-                $value = $value->value;
-            }
-            $reqData .= json_encode($value) . PHP_EOL;
-        }
-
-        $attach = array();
-        $attach['path'] = $request->getService();
-        $attach['interface'] = $request->getService();
-        if($request->getGroup()){
-            $attach['group'] = $request->getGroup();
-        }
-        if($request->getVersion()){
-            $attach['version'] = $request->getVersion();
-        }
-        $attach['timeout'] = $request->getTimeout();
-        $request->setAttach($attach);
-        $reqData = $reqData . json_encode($request->getAttach());
-echo $reqData;
         $upper = ($request->getSn() & self::UPPER_MASK) >> 32;
         $lower = $request->getSn() & self::LOWER_MASK;
-        $flag = (self::FLAG_REQUEST | self::DUBBO_PROTOCOL_SERIALIZE_FAST_JSON);
+        $flag = (self::FLAG_REQUEST | $serialize_type);
         if ($request->isTwoWay()) $flag |= self::FLAG_TWOWAY;
         if ($request->isHeartbeatEvent()) $flag |= self::FLAG_HEARTBEAT_EVENT;
         $out = pack("n1C1a1N1N1N1",
@@ -115,13 +93,91 @@ echo $reqData;
         return $out . $reqData;
     }
 
+    public function buildFastJsonBody(DubboRequest $request)
+    {
+        $reqData = json_encode($request->getDubboVersion()) . PHP_EOL .
+            json_encode($request->getService()) . PHP_EOL;
+        if ($request->getVersion()) {
+            $reqData .= json_encode($request->getVersion()) . PHP_EOL;
+        } else {
+            $reqData .= '""' . PHP_EOL;
+        }
+        $reqData .= json_encode($request->getMethod()) . PHP_EOL;
+        $reqData .= json_encode($this->typeRefs($request)) . PHP_EOL;
+        foreach ($request->getParams() as $value) {
+            if ($value instanceof \stdClass) {
+                $value = $value->object;
+            } elseif ($value instanceof Type) {
+                $value = $value->value;
+            }
+            $reqData .= json_encode($value) . PHP_EOL;
+        }
+        $attach = array();
+        $attach['path'] = $request->getService();
+        $attach['interface'] = $request->getService();
+        if ($request->getGroup()) {
+            $attach['group'] = $request->getGroup();
+        }
+        if ($request->getVersion()) {
+            $attach['version'] = $request->getVersion();
+        }
+        $attach['timeout'] = $request->getTimeout();
+        $request->setAttach($attach);
+        $reqData .= json_encode($request->getAttach());
+        return $reqData;
+
+    }
+
+    public function buildHessian2Body(DubboRequest $request)
+    {
+        $hess_stream = new \HessianStream();
+        $hess_options = new \HessianOptions();
+        $hess_factory = new \HessianFactory();
+        $writer = $hess_factory->getWriter($hess_stream, $hess_options);
+        $reqData = '';
+        $reqData .= $writer->writeValue($request->getDubboVersion());
+        $reqData .= $writer->writeValue($request->getService());
+        if ($request->getVersion()) {
+            $reqData .= $writer->writeValue($request->getVersion());
+        } else {
+            $reqData .= $writer->writeValue('');
+        }
+        $reqData .= $writer->writeValue($request->getMethod());
+        $reqData .= $writer->writeValue($this->typeRefs($request));
+        foreach ($request->getParams() as $value) {
+            if ($value instanceof \stdClass) {
+                $value = $value->object;
+            } elseif ($value instanceof Type) {
+                $value = $value->value;
+            }
+            $reqData .= $writer->writeValue($value);
+        }
+        $attach = ['path' => $request->getService(), 'interface' => $request->getService(), 'timeout' => $request->getTimeout()];
+        if ($request->getGroup()) {
+            $attach['group'] = $request->getGroup();
+        }
+        if ($request->getVersion()) {
+            $attach['version'] = $request->getVersion();
+        }
+        $reqData .= $writer->writeValue($attach);
+        return $reqData;
+    }
+
+    private function typeRefs(DubboRequest $request)
+    {
+        $typeRefs = '';
+        foreach ($request->getTypes() as $type) {
+            $typeRefs .= $type;
+        }
+        return $typeRefs;
+    }
+
 
     public function parseResponseHeader(DubboResponse $response)
     {
         $res_header = substr($response->getFullData(), 0, self::PACKAGE_HEDA_LEN);
         $format = 'n1magic/C1flag/C1status/N1upper/N1lower/N1len';
         $_arr = unpack($format, $res_header);
-        print_r($_arr);
         $response->setStatus($_arr['status']);
         $response->setSn($_arr["upper"] << 32 | $_arr["lower"]);
         $flag = $_arr["flag"];
@@ -159,7 +215,7 @@ echo $reqData;
                     default:
                         return false;
                 }
-            } else if(self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2  == $response->getSerialization() ){
+            } else if (self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2 == $response->getSerialization()) {
                 $_data = substr($_data, 1);
                 $hess_stream = new \HessianStream($_data);
                 $hess_options = new \HessianOptions();

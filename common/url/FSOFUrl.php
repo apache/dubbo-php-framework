@@ -35,6 +35,7 @@ class FSOFUrl
     const URL_CATEGORY = 'category';
 
 	const URL_WEIGHT = 'weight';
+	const URL_SERIALIZATION = 'serialization';
 
     private $originUrl = NULL;
     private $encodedUrl = NULL;
@@ -50,6 +51,7 @@ class FSOFUrl
     private $version = NULL;
     private $params = NULL;
 	private $weight = NULL;
+	private $serialization = NULL;
 
     private $logger;
 
@@ -147,6 +149,11 @@ class FSOFUrl
 			{
 				$this->service = $getArgs[self::URL_SERVICE];
 			}
+
+			if(isset($getArgs[self::URL_SERIALIZATION]))
+            {
+                $this->serialization = $getArgs[self::URL_SERIALIZATION];
+            }
 		}
 
         $this->joinUrlStr();
@@ -269,6 +276,23 @@ class FSOFUrl
 	{
 		$this->weight = $weight;
 	}
+
+	public function getSerialization($defaultValue = NULL)
+    {
+        if(empty($this->serialization))
+        {
+            return $defaultValue;
+        }
+        else
+        {
+            return $this->serialization;
+        }
+    }
+
+	public function setSerialization($serialization)
+    {
+        $this->serialization = $serialization;
+    }
 
 	public function getParams($key)
 	{
