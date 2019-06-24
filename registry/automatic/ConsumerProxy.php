@@ -25,19 +25,21 @@ class ConsumerProxy
 {
     private static $_instance;
     private $logger;
+    private $config = [];
 
-    public static function instance()
+    public static function instance($config)
     {
         if (!isset(ConsumerProxy::$_instance)) 
         {
-            ConsumerProxy::$_instance = new ConsumerProxy();
+            ConsumerProxy::$_instance = new ConsumerProxy($config);
         }
         return ConsumerProxy::$_instance;
     }
 
-    public function __construct()
+    public function __construct($config)
     {
         $this->logger = \Logger::getLogger(__CLASS__);
+        $this->config = $config;
     }
 
     /**
@@ -48,7 +50,7 @@ class ConsumerProxy
         try
 		{
 			//获取路由信息
-            $providerInfo = FSOFRedis::instance()->getProviderInfo($service);
+            $providerInfo = FSOFRedis::instance($this->config)->getProviderInfo($service);
 			return $this->filterProviderUrls($providerInfo, $version, $group, $service);
         }
         catch (\Exception $e)

@@ -61,6 +61,11 @@ final class ProxyFactory
 	 */
 	protected static $serviceConsumers = array();
 
+    /**
+     * @var  *.consumer中配置的config信息
+     */
+	protected static $configConsumer = Array();
+
     private static $logger;
 
 	public static function setConsumerConfig($configData, $consumerConfigFile, $initSettings)
@@ -89,6 +94,11 @@ final class ProxyFactory
 			self::$appVersion = $configData['consumer_config']['version'];
 		}
 
+        if(isset($configData['consumer_config']))
+        {
+            self::$configConsumer = $configData['consumer_config'];
+        }
+
 		if(isset($configData['consumer_services']))
 		{
 			self::$serviceConsumers = $configData['consumer_services'];
@@ -99,7 +109,7 @@ final class ProxyFactory
     private static function getInstancByRedis($service, $ioTimeOut, $version, $group)
 	{
         $ret = NULL;
-        $providerInfo = ConsumerProxy::instance()->getProviders($service, $version, $group);
+        $providerInfo = ConsumerProxy::instance(self::$configConsumer)->getProviders($service, $version, $group);
         if(!empty($providerInfo))
         {
             $cacheKey = $service.':'.$version.':'.$group;

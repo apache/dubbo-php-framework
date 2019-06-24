@@ -29,14 +29,24 @@ class FSOFRedis
     private $m_redis = null;
 
     private $logger;
+
+    private $timeout = self::REDIS_TIME_OUT;
+
+    private $retry_count = 1;
+
+    private $connect_type = FSOFConstants::FSOF_SERVICE_REDIS_CONNECT_TYPE_TCP;
+
+    private $hosts = [
+        [FSOFConstants::FSOF_SERVICE_REDIS_HOST, FSOFConstants::FSOF_SERVICE_REDIS_PORT],
+    ];
         
-    public static function instance()
+    public static function instance($config)
     {
         if (extension_loaded('redis'))
         {
             if (!isset(FSOFRedis::$_instance))
             {
-                FSOFRedis::$_instance = new FSOFRedis();
+                FSOFRedis::$_instance = new FSOFRedis($config);
             }
             return FSOFRedis::$_instance;
         }
@@ -47,9 +57,31 @@ class FSOFRedis
         return NULL;
     }
     
-    public function  __construct()
+    public function  __construct($config)
     {
         $this->logger = \Logger::getLogger(__CLASS__);
+        if($config['redis_hosts'])
+        {
+            $this->hosts = [];
+            $address = explode(',', $config['redis_hosts']);
+            foreach ($address as $node){
+                list($host, $port) = explode(':', $node);
+                $this->hosts[] = [$host, $port??FSOFConstants::FSOF_SERVICE_REDIS_PORT];
+            }
+        }
+        if($config['redis_connect_timeout'])
+        {
+            $this->timeout = $config['redis_connect_timeout'];
+        }
+        if($config['redis_connect_type'])
+        {
+            $this->connect_type = $config['redis_connect_type'];
+        }
+        if($config['redis_retry_count'])
+        {
+            $this->retry = min($config['redis_retry_count'], 1);
+        }
+
         $this->get_redis();
     }
 
@@ -57,23 +89,33 @@ class FSOFRedis
     {
         if (!isset($this->m_redis))
         {
-            try
-            {
-                $redis_cli = new \Redis();
-				$ret = $redis_cli->connect("127.0.0.1",FSOFConstants::FSOF_SERVICE_REDIS_PORT,self::REDIS_TIME_OUT);
-				if (!$ret)
-				{
-                    $this->logger->warn("connect redis failed[127.0.0.1:6379]");
-					$ret = $redis_cli->connect("/var/fsof/redis.sock",-1,self::REDIS_TIME_OUT);
-				}
-            }
-            catch (\Exception $e)
-            {
-                $ret = false;
-                $this->logger->error('connect redis excepiton:'.$e->getMessage().', errno:' . $e->getCode());
-                throw new \Exception($e->getMessage());
-            }
-
+            $hosts_count = count($this->hosts);
+            $retry = $this->retry_count;
+            $rand_num = rand() % $hosts_count;
+            do{
+                try{
+                    $redis_cli = new \Redis();
+                    if($this->connect_type == FSOFConstants::FSOF_SERVICE_REDIS_CONNECT_TYPE_SOCK)
+                    {
+                        $node = $this->hosts[$rand_num];
+                        $ret = $redis_cli->connect($node[0],$node[1],$this->timeout);
+                        $rand_num = ($rand_num + 1)%$hosts_count;
+                        if (!$ret)
+                        {
+                            $this->logger->warn("connect redis failed[{$node[0]}:{$node[1]}]");
+                        }
+                    }else{
+                        $ret = $redis_cli->connect("/var/fsof/redis.sock",-1,FSOFConstants::FSOF_SERVICE_REDIS_PORT,$this->timeout);
+                    }
+                    if($ret)
+                    {
+                        $e = null;
+                        break;
+                    }
+                }catch (\Exception $e){
+                    $this->logger->error('connect redis excepiton:'.$e->getMessage().', errno:' . $e->getCode());
+                }
+            }while($retry-- > 0);
             if($ret)
             {
                 $this->m_redis = $redis_cli;
@@ -81,7 +123,7 @@ class FSOFRedis
             else
             {
                 $this->logger->error('connect redis failed:|errno:' . $redis_cli->getLastError());
-                throw new \Exception("连接本地redis异常");
+                throw new \Exception("连接redis异常");
             }
         }
 

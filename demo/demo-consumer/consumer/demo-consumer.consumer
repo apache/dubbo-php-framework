@@ -1,5 +1,11 @@
 [consumer_config]
 p2p_mode = false
+#tcp/sock
+redis_connect_type = tcp
+redis_hosts = 127.0.0.1:6379,127.0.0.1:6379
+redis_connect_timeout = 1
+redis_retry_count = 1
+
 
 [consumer_services]
 
