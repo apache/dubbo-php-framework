@@ -1,9 +1,9 @@
 <configuration xmlns="http://logging.apache.org/log4php/">
-    <appender name="myAppender" class="LoggerAppenderFile">
-        <param name="file" value="/home/devops/workspace/dubbo/logs/consumer.log" />
+    <appender name="myAppender" class="LoggerAppenderDailyFile">
         <layout class="LoggerLayoutPattern">
-            <param name="conversionPattern" value="[%date{Y-m-d H:i:s,u}][%level][%logger][%line] %message%newline" />
+            <param name="conversionPattern" value="[%date{Y-m-d H:i:s,u}][%level][traceid:%X{traceid}][%logger][%line] %message%newline" />
         </layout>
+        <param name="file"  value="/home/devops/workspace/dubbo/logs/consumer_%s.log" />
     </appender>
     <root>
         <level value="DEBUG" />
