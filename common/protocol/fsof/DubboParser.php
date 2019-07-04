@@ -1,8 +1,9 @@
 <?php
-
 namespace com\fenqile\fsof\common\protocol\fsof;
 
 use com\fenqile\fsof\consumer\Type;
+use Icecave\Flax\Serialization\Encoder;
+use Icecave\Flax\DubboParser as Decoder;
 
 /**
  *
@@ -71,7 +72,7 @@ class DubboParser
 
     public function packRequest(DubboRequest $request)
     {
-        if (self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2 == self::DUBBO_PROTOCOL_NAME_MAP_CODE[$request->getSerialization()]) {
+        if (self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2 == (self::DUBBO_PROTOCOL_NAME_MAP_CODE[$request->getSerialization()]??null)) {
             $reqData = $this->buildBodyForHessian2($request);
             $serialize_type = self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2;
         } else {
@@ -104,12 +105,7 @@ class DubboParser
         }
         $reqData .= json_encode($request->getMethod()) . PHP_EOL;
         $reqData .= json_encode($this->typeRefs($request)) . PHP_EOL;
-        foreach ($request->getParams() as $value) {
-            if ($value instanceof \stdClass) {
-                $value = $value->object;
-            } elseif ($value instanceof Type) {
-                $value = $value->value;
-            }
+        foreach (Type::getDataForSafed($request->getParams()) as $value) {
             $reqData .= json_encode($value) . PHP_EOL;
         }
         $attach = array();
@@ -130,27 +126,19 @@ class DubboParser
 
     public function buildBodyForHessian2(DubboRequest $request)
     {
-        $hess_stream = new \HessianStream();
-        $hess_options = new \HessianOptions();
-        $hess_factory = new \HessianFactory();
-        $writer = $hess_factory->getWriter($hess_stream, $hess_options);
+        $encode = new Encoder();
         $reqData = '';
-        $reqData .= $writer->writeValue($request->getDubboVersion());
-        $reqData .= $writer->writeValue($request->getService());
+        $reqData .= $encode->encode($request->getDubboVersion());
+        $reqData .= $encode->encode($request->getService());
         if ($request->getVersion()) {
-            $reqData .= $writer->writeValue($request->getVersion());
+            $reqData .= $encode->encode($request->getVersion());
         } else {
-            $reqData .= $writer->writeValue('');
+            $reqData .= $encode->encode('');
         }
-        $reqData .= $writer->writeValue($request->getMethod());
-        $reqData .= $writer->writeValue($this->typeRefs($request));
-        foreach ($request->getParams() as $value) {
-            if ($value instanceof \stdClass) {
-                $value = $value->object;
-            } elseif ($value instanceof Type) {
-                $value = $value->value;
-            }
-            $reqData .= $writer->writeValue($value);
+        $reqData .= $encode->encode($request->getMethod());
+        $reqData .= $encode->encode($this->typeRefs($request));
+        foreach (Type::getDataForSafed($request->getParams()) as $value) {
+            $reqData .= $encode->encode($value);
         }
         $attach = ['path' => $request->getService(), 'interface' => $request->getService(), 'timeout' => $request->getTimeout()];
         if ($request->getGroup()) {
@@ -159,7 +147,7 @@ class DubboParser
         if ($request->getVersion()) {
             $attach['version'] = $request->getVersion();
         }
-        $reqData .= $writer->writeValue($attach);
+        $reqData .= $encode->encode($attach);
         return $reqData;
     }
 
@@ -184,7 +172,7 @@ class DubboParser
         if (($flag & self::FLAG_HEARTBEAT_EVENT) != 0) {
             $response->setHeartbeatEvent(true);
         }
-        $response->setSerialization($flag & self::DUBBO_PROTOCOL_SERIALIZE_FAST_JSON);
+        $response->setSerialization($flag & self::SERIALIZATION_MASK);
         $response->setLen($_arr["len"]);
         return $response;
     }
@@ -239,13 +227,9 @@ class DubboParser
     private function parseResponseBodyForHessian2(DubboResponse $response)
     {
         if (!$response->isHeartbeatEvent()) {
-            $_data = substr($response->getFullData(), self::PACKAGE_HEDA_LEN + 1);
-            $response->setResponseBody($_data);
-            $hess_stream = new \HessianStream($_data);
-            $hess_options = new \HessianOptions();
-            $hess_factory = new \HessianFactory();
-            $parser = $hess_factory->getParser($hess_stream, $hess_options);
-            $content = $parser->parseReply();
+            $_data = $response->getFullData();
+            $decode = new Decoder($_data);
+            $content = $decode->getData($_data);
             $response->setResult($content);
         }
         return $response;

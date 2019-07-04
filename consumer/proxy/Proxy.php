@@ -83,11 +83,14 @@ final class Proxy
 
     protected function generateParamType($args)
     {
+        $types = [];
         foreach ($args as $val) {
             if($val instanceof \stdClass){
                 $types[] = $val->class;
-            }else{
+            }else if($val instanceof Type){
                 $types[] = Type::adapter[$val->type]??'Ljava/lang/Object;';
+            }else{
+                $types[] = 'Ljava/lang/Object;';
             }
         }
         return $types;

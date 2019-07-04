@@ -22,6 +22,7 @@ use com\fenqile\fsof\common\protocol\fsof\DubboParser;
 use com\fenqile\fsof\common\protocol\fsof\DubboRequest;
 use com\fenqile\fsof\common\protocol\fsof\DubboResponse;
 use com\fenqile\fsof\consumer\client\FSOFClient4Linux;
+use com\fenqile\fsof\consumer\ConsumerException;
 
 class FSOFProcessor
 {
@@ -35,6 +36,8 @@ class FSOFProcessor
 
     private  $logger;
 
+    private $iotimeout = 3;
+
     public function __construct()
     {
         $this->logger = \Logger::getLogger(__CLASS__);
@@ -43,6 +46,7 @@ class FSOFProcessor
 
     public function executeRequest(DubboRequest $request, $svrAddr, $ioTimeOut, &$providerAddr)
     {
+        $this->iotimeout = $ioTimeOut;
         //计算服务端个数
         $svrNum = count($svrAddr);
         //连接异常重试次数最多2次
@@ -66,10 +70,10 @@ class FSOFProcessor
                 $request->port = $port;
                 $request->setGroup($svrUrl->getGroup());
                 $request->setVersion( $svrUrl->getVersion());
-                $request->setTimeout($ioTimeOut * 1000);
+                $request->setTimeout($this->iotimeout * 1000);
                 $request->setSerialization($svrUrl->getSerialization(DubboParser::DUBBO_PROTOCOL_SERIALIZE_FAST_JSON));
 
-                $client = $this->connectProvider($host, $port, $ioTimeOut);
+                $client = $this->connectProvider($host, $port, $this->iotimeout);
                 if(empty($client))
                 {
                     //记录连接错误日志
@@ -126,7 +130,7 @@ class FSOFProcessor
                         $msg = mb_substr($msg, 0, 512, 'UTF-8').' ...(len:'.strlen($msg).")";
                     }
                     $this->logger->error("send date failed：" . $msg);
-                    throw new \Exception("发送请求数据失败");
+                    throw new ConsumerException("发送请求数据失败");
                 }
             }
             catch (\Exception $e)
@@ -139,7 +143,7 @@ class FSOFProcessor
                     $msg = mb_substr($msg, 0, 512, 'UTF-8').' ...(len:'.strlen($msg).")";
                 }
                 $this->logger->error("send date failed：" . $msg, $e);
-                throw new \Exception("发送请求数据失败");
+                throw new ConsumerException("发送请求数据失败");
             }
 
             try
@@ -157,7 +161,7 @@ class FSOFProcessor
         }
         else
         {
-            throw new \Exception("与服务器建立连接失败");
+            throw new ConsumerException("与服务器建立连接失败");
         }
         return $ret;
     }
@@ -206,11 +210,11 @@ class FSOFProcessor
         {
             if (0 == $socket->getlasterror())
             {
-                throw new \Exception("provider端己关闭网络连接");
+                throw new ConsumerException("provider端己关闭网络连接");
             }
             else
             {
-                throw new \Exception("接收应答数据超时");
+                throw new ConsumerException("接收应答数据超时");
             }
         }
 
@@ -221,7 +225,7 @@ class FSOFProcessor
         if (($response) && ($response->getSn() != $request->getSn()))
         {
             $this->logger->error("response sn[{$response->getSn()}] != request sn[{$request->getSn()}]");
-            throw new \Exception("请求包中的sn非法");
+            throw new ConsumerException("请求包中的sn非法");
         }
 
         //接收消息体
@@ -256,25 +260,25 @@ class FSOFProcessor
                 $tmpdata = $this->Recv($socket, $cur_len);
                 if ($tmpdata)
                 {
-                    $recv_data = $recv_data . $tmpdata;
+                    $recv_data .= $tmpdata;
                     $resv_len -= $cur_len;
                 }
                 else
                 {
                     if (0 == $socket->getlasterror())
                     {
-                        throw new \Exception("provider端己关闭网络连接");
+                        throw new ConsumerException("provider端己关闭网络连接");
                     }
                     else
                     {
-                        throw new \Exception("接收应答数据超时");
+                        throw new ConsumerException("接收应答数据超时");
                     }
                 }
-                //如果超过15秒就当超时处理
-                if ((microtime(true) - $start_time) > 15)
+                //如果超过设置的iotimeout就当超时处理
+                if ((microtime(true) - $start_time) > $this->iotimeout)
                 {
                     $this->logger->error("Multi recv {$resv_len} bytes data timeout");
-                    throw new \Exception("接收应答数据超时");
+                    throw new ConsumerException("接收应答数据超时");
                 }
             } while ($resv_len > 0);
 
@@ -285,7 +289,7 @@ class FSOFProcessor
         {
             if(DubboResponse::OK != $response->getStatus())
             {
-                throw new \Exception($response->getErrorMsg());
+                throw new ConsumerException($response->getErrorMsg());
             }
             else
             {
@@ -295,7 +299,7 @@ class FSOFProcessor
         else
         {
             $this->logger->error("parse response body err:".$response->__toString());
-            throw new \Exception("未知异常");
+            throw new ConsumerException("未知异常");
         }
     }
 
@@ -303,21 +307,20 @@ class FSOFProcessor
     {
         try
         {
+            $start_time = microtime(true);
             $resv_len = $len;
             $_data = '';
-            $cnt = 20;//最多循环20次，防止provider端挂掉时，consumer陷入死循环
             do
             {
-                $cnt--;
                 $tmp_data = $socket->recv($resv_len);
                 if (!$tmp_data)
                 {
                     $this->logger->warn("socket->recv faile:$resv_len");
                     break;
                 }
-                $_data = $_data . $tmp_data;
+                $_data .= $tmp_data;
                 $resv_len -= strlen($tmp_data);
-            } while (($resv_len > 0) && ($cnt > 0));
+            } while (($resv_len > 0) && ( (microtime(true) - $start_time) > $this->iotimeout)); //读取数据不能超过设置的io时长
 
             if ($resv_len > 0)
             {
@@ -332,11 +335,11 @@ class FSOFProcessor
             $this->logger->error('recv data exception',$e);
             if(self::FSOF_CONNECTION_RESET == $e->getCode())
             {
-                throw new \Exception("未知异常");
+                throw new ConsumerException("未知异常");
             }
             else
             {
-                throw new \Exception("接收应答数据超时");
+                throw new ConsumerException("接收应答数据超时");
             }
         }
     }

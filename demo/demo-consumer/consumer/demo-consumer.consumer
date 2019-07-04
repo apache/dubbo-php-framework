@@ -1,16 +1,10 @@
 [consumer_config]
 p2p_mode = false
-#tcp/sock
-redis_connect_type = tcp
-redis_hosts = 127.0.0.1:6379,127.0.0.1:6379
-redis_connect_timeout = 1
-redis_retry_count = 1
-
 
 [consumer_services]
 
 com.fenqile.example.DemoService[group] = *
 com.fenqile.example.DemoService[version] = 1.0.0
 
-com.imooc.springboot.dubbo.demo.ObjectDemoService[group] = *
-com.imooc.springboot.dubbo.demo.ObjectDemoService[version] = 1.0.0
+com.fenqile.arch.dubbo.service.DemoPhpService[group] = *
+com.fenqile.arch.dubbo.service.DemoPhpService[version] = 1.0.0

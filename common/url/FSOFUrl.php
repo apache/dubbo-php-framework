@@ -153,6 +153,8 @@ class FSOFUrl
 			if(isset($getArgs[self::URL_SERIALIZATION]))
             {
                 $this->serialization = $getArgs[self::URL_SERIALIZATION];
+            } else {
+                $this->serialization = 'hessian2';
             }
 		}
 
