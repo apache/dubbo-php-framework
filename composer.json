@@ -1,5 +1,6 @@
 {
     "require": {
-        "apache/log4php": "^2.3"
+        "apache/log4php": "^2.3",
+        "crazyxman/hessian-parser": "dev-master"
     }
 }

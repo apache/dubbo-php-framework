@@ -320,7 +320,7 @@ class FSOFProcessor
                 }
                 $_data .= $tmp_data;
                 $resv_len -= strlen($tmp_data);
-            } while (($resv_len > 0) && ( (microtime(true) - $start_time) > $this->iotimeout)); //读取数据不能超过设置的io时长
+            } while (($resv_len > 0) && ( (microtime(true) - $start_time) < $this->iotimeout)); //读取数据不能超过设置的io时长
 
             if ($resv_len > 0)
             {
