@@ -169,7 +169,15 @@ class FSOFRedis
     {
         if (!empty($key) && isset($this->m_redis))
         {
-            return $this->getlRange($key);
+            try{
+                return $this->getlRange($key);
+            }catch (\Exception $e){
+                $this->logger->warn('redis current connect excepiton'.' |errcode:'.$e->getCode().' |errmsg:'.$e->getMessage());
+                $this->close();
+                //重试一次防止连接成功后，连接断开
+                $this->get_redis();
+                return $this->getlRange($key);
+            }
         }
         else
         {
