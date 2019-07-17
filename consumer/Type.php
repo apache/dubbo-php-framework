@@ -13,6 +13,8 @@ class Type
     const STRING = 6;
     const BOOL = 7;
     const BOOLEAN = 7;
+    const ARRAYLIST = 8;
+    const MAP = 9;
 
     const adapter = [
         Type::SHORT => 'S',
@@ -21,7 +23,9 @@ class Type
         Type::FLOAT => 'F',
         Type::DOUBLE => 'D',
         Type::BOOLEAN => 'Z',
-        Type::STRING => 'Ljava/lang/String;'
+        Type::STRING => 'Ljava/lang/String;',
+        Type::ARRAYLIST => 'Ljava/util/ArrayList;',
+        Type::MAP => 'Ljava/util/Map;'
     ];
 
     public function __construct($type, $value)
@@ -130,6 +134,28 @@ class Type
     }
 
     /**
+     * Arraylist type
+     *
+     * @param  arraylist $value
+     * @return Type
+     */
+    public static function arrayList($value)
+    {
+        return new self(self::ARRAYLIST, $value);
+    }
+
+    /**
+     * Map type
+     *
+     * @param  map $value
+     * @return Type
+     */
+    public static function map($value)
+    {
+        return new self(self::MAP, $value);
+    }
+
+    /**
      * Object type
      *
      * @param  integer $value
@@ -175,6 +201,10 @@ class Type
                 break;
             case Type::BOOLEAN:
                 $value = (bool)$type->value;
+                break;
+            case Type::ARRAYLIST:
+            case Type::MAP:
+                $value = (array)$type->value;
                 break;
             case Type::STRING:
             default:

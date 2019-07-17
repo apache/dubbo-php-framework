@@ -4,6 +4,7 @@ namespace com\fenqile\fsof\common\protocol\fsof;
 use com\fenqile\fsof\consumer\Type;
 use Icecave\Flax\Serialization\Encoder;
 use Icecave\Flax\DubboParser as Decoder;
+use com\fenqile\fsof\consumer\ConsumerException;
 
 /**
  *
@@ -185,10 +186,10 @@ class DubboParser
             } else if (self::DUBBO_PROTOCOL_SERIALIZE_HESSIAN2 == $response->getSerialization()) {
                 $this->parseResponseBodyForHessian2($response);
             } else {
-                throw new \Exception(sprintf('返回的序列化类型:(%s), 不支持解析!', $response->getSerialization()));
+                throw new ConsumerException(sprintf('返回的序列化类型:(%s), 不支持解析!', $response->getSerialization()));
             }
         } else {
-            throw new \Exception($response->getFullData());
+            throw new ConsumerException($response->getFullData());
         }
         return $response;
     }
@@ -210,11 +211,11 @@ class DubboParser
                 case self::RESPONSE_WITH_EXCEPTION:
                     $exception = json_decode($content, true);
                     if (is_array($exception) && array_key_exists('message', $exception)) {
-                        throw new \Exception($exception['message']);
+                        throw new ConsumerException($exception['message']);
                     } else if (is_string($exception)) {
-                        throw new \Exception($exception);
+                        throw new ConsumerException($exception);
                     } else {
-                        throw new \Exception("provider occur error");
+                        throw new ConsumerException("provider occur error");
                     }
                     break;
                 default:
