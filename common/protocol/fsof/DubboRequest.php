@@ -15,6 +15,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+
 namespace com\fenqile\fsof\common\protocol\fsof;
 
 use com\fenqile\fsof\consumer\Type;
@@ -267,9 +268,14 @@ class DubboRequest
     public function setParams($params)
     {
         $this->params = $params;
-        foreach ($this->params as &$val) {
-            if ($val instanceof Type) {
-                $val = $val->object;
+        foreach ($this->params as &$value) {
+            if ($value instanceof Type) {
+                $value = $value->object;
+            } elseif (is_object($value)) {
+                $value = new \stdClass();
+                foreach ($value as $property => $val) {
+                    $value->$property = $val;
+                }
             }
         }
     }
