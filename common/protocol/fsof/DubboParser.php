@@ -106,7 +106,7 @@ class DubboParser
         }
         $reqData .= json_encode($request->getMethod()) . PHP_EOL;
         $reqData .= json_encode($this->typeRefs($request)) . PHP_EOL;
-        foreach (Type::getDataForSafed($request->getParams()) as $value) {
+        foreach ($request->getParams() as $value) {
             $reqData .= json_encode($value) . PHP_EOL;
         }
         $attach = array();
@@ -138,7 +138,7 @@ class DubboParser
         }
         $reqData .= $encode->encode($request->getMethod());
         $reqData .= $encode->encode($this->typeRefs($request));
-        foreach (Type::getDataForSafed($request->getParams()) as $value) {
+        foreach ($request->getParams() as $value) {
             $reqData .= $encode->encode($value);
         }
         $attach = ['path' => $request->getService(), 'interface' => $request->getService(), 'timeout' => $request->getTimeout()];

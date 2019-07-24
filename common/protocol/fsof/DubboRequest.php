@@ -17,6 +17,8 @@
  */
 namespace com\fenqile\fsof\common\protocol\fsof;
 
+use com\fenqile\fsof\consumer\Type;
+
 class DubboRequest
 {
     //包头字段
@@ -89,7 +91,6 @@ class DubboRequest
     }
 
 
-
     /**
      * @return boolean
      */
@@ -105,8 +106,6 @@ class DubboRequest
     {
         $this->heartbeatEvent = $heartbeatEvent;
     }
-
-
 
 
     /**
@@ -140,7 +139,6 @@ class DubboRequest
     {
         $this->timeout = $timeout;
     }
-
 
 
     /**
@@ -269,6 +267,11 @@ class DubboRequest
     public function setParams($params)
     {
         $this->params = $params;
+        foreach ($this->params as &$val) {
+            if ($val instanceof Type) {
+                $val = $val->object;
+            }
+        }
     }
 
     /**
@@ -318,7 +321,6 @@ class DubboRequest
     {
         $this->paramNum = $paramNum;
     }
-
 
 
     //用于监控service中各方法的性能

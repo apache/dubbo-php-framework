@@ -2,8 +2,12 @@
 
 namespace com\fenqile\fsof\consumer;
 
+use com\fenqile\fsof\consumer\ConsumerException;
+use Icecave\Collections\Collection;
+
 class Type
 {
+    /*
     const SHORT = 1;
     const INT = 2;
     const INTEGER = 2;
@@ -13,10 +17,13 @@ class Type
     const STRING = 6;
     const BOOL = 7;
     const BOOLEAN = 7;
-    const ARRAYLIST = 8;
-    const MAP = 9;
+    const MAP = 8;
+    */
+    const ARRAYLIST = 9;
+    const DEFAULT_TYPE = 10;
 
     const adapter = [
+        /*
         Type::SHORT => 'S',
         Type::INT => 'I',
         Type::LONG => 'J',
@@ -24,193 +31,82 @@ class Type
         Type::DOUBLE => 'D',
         Type::BOOLEAN => 'Z',
         Type::STRING => 'Ljava/lang/String;',
+        Type::MAP => 'Ljava/util/Map;',
+        */
         Type::ARRAYLIST => 'Ljava/util/ArrayList;',
-        Type::MAP => 'Ljava/util/Map;'
+        Type::DEFAULT_TYPE => 'Ljava/lang/Object;'
     ];
 
-    public function __construct($type, $value)
+    private function __construct()
     {
-        $this->type = $type;
-        $this->value = $value;
     }
 
     /**
-     * Short type
      *
-     * @param  integer $value
-     * @return Type
-     */
-    public static function short($value)
-    {
-        return new self(self::SHORT, $value);
-    }
-
-    /**
-     * Int type
-     *
-     * @param  integer $value
-     * @return Type
-     */
-    public static function int($value)
-    {
-        return new self(self::INT, $value);
-    }
-
-    /**
-     * Integer type
-     *
-     * @param  integer $value
-     * @return Type
-     */
-    public static function integer($value)
-    {
-        return new self(self::INTEGER, $value);
-    }
-
-    /**
-     * Long type
-     *
-     * @param  integer $value
-     * @return Type
-     */
-    public static function long($value)
-    {
-        return new self(self::LONG, $value);
-    }
-
-    /**
-     * Float type
-     *
-     * @param  integer $value
-     * @return Type
-     */
-    public static function float($value)
-    {
-        return new self(self::FLOAT, $value);
-    }
-
-    /**
-     * Double type
-     *
-     * @param  integer $value
-     * @return Type
-     */
-    public static function double($value)
-    {
-        return new self(self::DOUBLE, $value);
-    }
-
-    /**
-     * String type
-     *
-     * @param  string $value
-     * @return Type
-     */
-    public static function string($value)
-    {
-        return new self(self::STRING, $value);
-    }
-
-    /**
-     * Bool type
-     *
-     * @param  boolean $value
-     * @return Type
-     */
-    public static function bool($value)
-    {
-        return new self(self::BOOL, $value);
-    }
-
-    /**
-     * Boolean type
-     *
-     * @param  boolean $value
-     * @return Type
-     */
-    public static function boolean($value)
-    {
-        return new self(self::BOOLEAN, $value);
-    }
-
-    /**
-     * Arraylist type
-     *
-     * @param  arraylist $value
-     * @return Type
-     */
-    public static function arrayList($value)
-    {
-        return new self(self::ARRAYLIST, $value);
-    }
-
-    /**
-     * Map type
-     *
-     * @param  map $value
-     * @return Type
-     */
-    public static function map($value)
-    {
-        return new self(self::MAP, $value);
-    }
-
-    /**
-     * Object type
-     *
-     * @param  integer $value
+     * @param integer $value
      * @return UniversalObject
      */
     public static function object($class, $properties)
     {
+        $typeObj = new self();
+        $typeObj->className = $class;
         $std = new \stdClass;
-        foreach ($properties as $key => $value)
-        {
-            $std->$key = ($value instanceof Type) ? self::typeTosafe($value) : $value;
+        foreach ($properties as $key => $value) {
+            $std->$key = $value;
         }
-        $std_wrap = new \stdClass();
-        $std_wrap->object = $std;
-        $std_wrap->class = 'L'.str_replace('.', '/', $class).';';
-        return $std_wrap;
+        $typeObj->object = $std;
+        return $typeObj;
     }
 
-    public static function getDataForSafed($args)
+    /**
+     *
+     * @param mixed $arg
+     * @return string
+     * @throws ConsumerException
+     */
+    public static function argToType($arg)
     {
-        foreach ($args as &$value)
-        {
-            if ($value instanceof \stdClass) {
-                $value = $value->object;
-            } elseif ($value instanceof Type) {
-                $value = self::typeTosafe($value);
-            }
-        }
-        return $args;
-    }
-
-    public static function  typeTosafe(Type $type)
-    {
-        switch ($type->type){
-            case Type::SHORT:
-            case Type::INT:
-            case Type::LONG:
-                $value = (int)$type->value;
-                break;
-            case Type::FLOAT:
-            case Type::DOUBLE:
-                $value = (float)$type->value;
-                break;
-            case Type::BOOLEAN:
-                $value = (bool)$type->value;
-                break;
-            case Type::ARRAYLIST:
-            case Type::MAP:
-                $value = (array)$type->value;
-                break;
-            case Type::STRING:
+        $type = gettype($arg);
+        switch ($type) {
+            case 'integer':
+            case 'boolean':
+            case 'double':
+            case 'string':
+            case 'NULL':
+                return self::adapter[Type::DEFAULT_TYPE];
+            case 'array':
+                if (Collection::isSequential($arg)) {
+                    return self::adapter[Type::ARRAYLIST];
+                } else {
+                    return self::adapter[Type::DEFAULT_TYPE];
+                }
+            case 'object':
+                if ($arg instanceof Type) {
+                    $className = $arg->className;
+                } else {
+                    $className = get_class($arg);
+                }
+                return 'L' . str_replace(['.', '\\'], '/', $className) . ';';
             default:
-                $value = (string)$type->value;
-                break;
+                throw new ConsumerException("Handler for type {$type} not implemented");
         }
-        return $value;
     }
+    /**
+     *
+     * @param int $arg
+     * @return int
+     */
+
+    /*
+    private static function numToType($value)
+    {
+        if (-32768 <= $value && $value <= 32767) {
+            return Type::SHORT;
+        } elseif (-2147483648 <= $value && $value <= 2147483647) {
+            return Type::INT;
+        }
+        return Type::LONG;
+    }
+    */
+
 }
