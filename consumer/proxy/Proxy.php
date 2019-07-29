@@ -18,8 +18,9 @@
 namespace com\fenqile\fsof\consumer\proxy;
 
 use com\fenqile\fsof\common\protocol\fsof\DubboRequest;
+use com\fenqile\fsof\consumer\ConsumerException;
 use com\fenqile\fsof\consumer\fsof\FSOFProcessor;
-
+use com\fenqile\fsof\consumer\Type;
 
 final class Proxy
 {
@@ -81,12 +82,11 @@ final class Proxy
         return $rand_number;
     }
 
-    protected function generateParamType($num)
+    protected function generateParamType($args)
     {
-        $types = array();
-        for($i = 0; $i < $num; $i++)
-        {
-            $types[] = 'Ljava/lang/Object;';
+        $types = [];
+        foreach ($args as $val) {
+            $types[] = Type::argToType($val);
         }
         return $types;
     }
@@ -114,14 +114,14 @@ final class Proxy
             $request->setService($this->serviceInterface);
             $request->setMethod($args[0]);
             array_shift($args);
+            $request->setTypes($this->generateParamType($args));
             $request->setParams($args);
-            $request->setTypes($this->generateParamType(count($request->getParams())));
             $result = $this->fsofProcessor->executeRequest($request, $this->serviceAddress, $this->ioTimeOut, $providerAddress);
         }catch (\Exception $e) {
             $cost_time = (int)((microtime(true) - $begin_time) * 1000000);
             //记录consumer接口告警日志
             $this->setAccLog($request, $cost_time, $e->getMessage());
-            throw $e;
+            throw new ConsumerException($e->getMessage(), $e);
         }
         $cost_time = (int)((microtime(true) - $begin_time) * 1000000);
         //记录consumer接口告警日志

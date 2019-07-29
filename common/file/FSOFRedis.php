@@ -22,21 +22,33 @@ use com\fenqile\fsof\common\config\FSOFConstants;
 
 class FSOFRedis
 {
-    const REDIS_TIME_OUT = 1;
 
     private static $_instance;
         
     private $m_redis = null;
 
     private $logger;
+
+    private $connect_timeout = 1;
+
+    private $read_timeout = 2;
+
+    private $retry_count = 1;
+
+    private $connect_type = FSOFConstants::FSOF_SERVICE_REDIS_CONNECT_TYPE_TCP;
+
+    private $hosts = [
+        [FSOFConstants::FSOF_SERVICE_REDIS_HOST, FSOFConstants::FSOF_SERVICE_REDIS_PORT],
+    ];
         
-    public static function instance()
+    public static function instance($config = [])
     {
         if (extension_loaded('redis'))
         {
             if (!isset(FSOFRedis::$_instance))
             {
-                FSOFRedis::$_instance = new FSOFRedis();
+                FSOFRedis::$_instance = new FSOFRedis($config);
+                FSOFRedis::$_instance->get_redis();
             }
             return FSOFRedis::$_instance;
         }
@@ -47,33 +59,68 @@ class FSOFRedis
         return NULL;
     }
     
-    public function  __construct()
+    public function  __construct($config = [])
     {
         $this->logger = \Logger::getLogger(__CLASS__);
-        $this->get_redis();
+        if(isset($config['redis_hosts']))
+        {
+            $this->hosts = [];
+            $address = explode(',', $config['redis_hosts']);
+            foreach ($address as $node){
+                list($host, $port) = explode(':', $node);
+                $this->hosts[] = [$host, $port??FSOFConstants::FSOF_SERVICE_REDIS_PORT];
+            }
+        }
+        if(isset($config['redis_connect_timeout']))
+        {
+            $this->connect_timeout = $config['redis_connect_timeout'];
+        }
+        if(isset($config['redis_read_timeout']))
+        {
+            $this->read_timeout = $config['redis_read_timeout'];
+        }
+        if(isset($config['redis_connect_type']))
+        {
+            $this->connect_type = $config['redis_connect_type'];
+        }
+        if(isset($config['redis_retry_count']))
+        {
+            $this->retry = min($config['redis_retry_count'], 1);
+        }
     }
 
     public function get_redis()
     {
         if (!isset($this->m_redis))
         {
-            try
-            {
-                $redis_cli = new \Redis();
-				$ret = $redis_cli->connect("127.0.0.1",FSOFConstants::FSOF_SERVICE_REDIS_PORT,self::REDIS_TIME_OUT);
-				if (!$ret)
-				{
-                    $this->logger->warn("connect redis failed[127.0.0.1:6379]");
-					$ret = $redis_cli->connect("/var/fsof/redis.sock",-1,self::REDIS_TIME_OUT);
-				}
-            }
-            catch (\Exception $e)
-            {
-                $ret = false;
-                $this->logger->error('connect redis excepiton:'.$e->getMessage().', errno:' . $e->getCode());
-                throw new \Exception($e->getMessage());
-            }
-
+            $hosts_count = count($this->hosts);
+            $retry = $this->retry_count;
+            $rand_num = rand() % $hosts_count;
+            $ret = false;
+            do{
+                try{
+                    $redis_cli = new \Redis();
+                    if($this->connect_type == FSOFConstants::FSOF_SERVICE_REDIS_CONNECT_TYPE_TCP)
+                    {
+                        $node = $this->hosts[$rand_num];
+                        $ret = $redis_cli->connect($node[0],$node[1],$this->connect_timeout);
+                        $redis_cli->setOption(\Redis::OPT_READ_TIMEOUT, $this->read_timeout);
+                        $rand_num = ($rand_num + 1)%$hosts_count;
+                        if (!$ret)
+                        {
+                            $this->logger->warn("connect redis failed[{$node[0]}:{$node[1]}]");
+                        }
+                    }else{
+                        $ret = $redis_cli->connect("/var/fsof/redis.sock",-1,FSOFConstants::FSOF_SERVICE_REDIS_PORT,$this->connect_timeout);
+                    }
+                    if($ret)
+                    {
+                        break;
+                    }
+                }catch (\Exception $e){
+                    $this->logger->error('connect redis excepiton:'.$e->getMessage().', errno:' . $e->getCode());
+                }
+            }while($retry-- > 0);
             if($ret)
             {
                 $this->m_redis = $redis_cli;
@@ -81,7 +128,7 @@ class FSOFRedis
             else
             {
                 $this->logger->error('connect redis failed:|errno:' . $redis_cli->getLastError());
-                throw new \Exception("连接本地redis异常");
+                throw new \Exception("连接redis异常");
             }
         }
 
@@ -120,27 +167,22 @@ class FSOFRedis
 
     public function getlist($key)
     {
-		$ret = NULL;
-        if (!empty($key)) 
+        if (!empty($key) && isset($this->m_redis))
         {
-			try
-			{
-				if(!isset($this->m_redis))
-				{
-					$this->get_redis();
-				}
-				$ret = $this->getlRange($key);
-			}
-			catch (\Exception $e)
-			{
+            try{
+                return $this->getlRange($key);
+            }catch (\Exception $e){
                 $this->logger->warn('redis current connect excepiton'.' |errcode:'.$e->getCode().' |errmsg:'.$e->getMessage());
-				$this->close();
-				//重试一次
-				$this->get_redis();
-				$ret = $this->getlRange($key);
-			}
-        } 
- 		return $ret;
+                $this->close();
+                //重试一次防止连接成功后，连接断开
+                $this->get_redis();
+                return $this->getlRange($key);
+            }
+        }
+        else
+        {
+            return null;
+        }
     }
 
     public function set($key, $value)

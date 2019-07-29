@@ -22,6 +22,7 @@ use com\fenqile\fsof\common\log\FSOFSystemUtil;
 use com\fenqile\fsof\common\config\FSOFConstants;
 use com\fenqile\fsof\common\config\FSOFCommonUtil;
 use com\fenqile\fsof\registry\automatic\ConsumerProxy;
+use com\fenqile\fsof\consumer\ConsumerException;
 
 
 final class ProxyFactory
@@ -61,6 +62,11 @@ final class ProxyFactory
 	 */
 	protected static $serviceConsumers = array();
 
+    /**
+     * @var  *.consumer中配置的config信息
+     */
+	protected static $configConsumer = Array();
+
     private static $logger;
 
 	public static function setConsumerConfig($configData, $consumerConfigFile, $initSettings)
@@ -89,6 +95,11 @@ final class ProxyFactory
 			self::$appVersion = $configData['consumer_config']['version'];
 		}
 
+        if(isset($configData['consumer_config']))
+        {
+            self::$configConsumer = $configData['consumer_config'];
+        }
+
 		if(isset($configData['consumer_services']))
 		{
 			self::$serviceConsumers = $configData['consumer_services'];
@@ -99,7 +110,7 @@ final class ProxyFactory
     private static function getInstancByRedis($service, $ioTimeOut, $version, $group)
 	{
         $ret = NULL;
-        $providerInfo = ConsumerProxy::instance()->getProviders($service, $version, $group);
+        $providerInfo = ConsumerProxy::instance(self::$configConsumer)->getProviders($service, $version, $group);
         if(!empty($providerInfo))
         {
             $cacheKey = $service.':'.$version.':'.$group;
@@ -164,7 +175,7 @@ final class ProxyFactory
         return $ret;         
     }
 
-    public static function getInstance($consumerInterface, $ioTimeOut = 3)
+    public static function getInstance($consumerInterface, $ioTimeOut = 3, $version = null, $group = null)
     {
     	$ret = NULL;
         $route = '';
@@ -210,7 +221,7 @@ final class ProxyFactory
 			if (empty($ret))
 			{
 				$errMsg = "current_address:".FSOFSystemUtil::getLocalIP()."|".$consumerInterface;
-                throw new \Exception($errMsg);
+                throw new ConsumerException($errMsg);
 			}
 			else
 			{
@@ -223,6 +234,7 @@ final class ProxyFactory
         {
             self::$logger->error('consumer_app:'.self::$appName.'|app_config_file:'.self::$appConfigFile.
                 '|version:'.$version.'|group:'.$group.'|provider_service:'.$consumerInterface.'|errmsg:'. $e->getMessage().'|exceptionmsg:'.$e);
+            throw new ConsumerException($e->getMessage(), $e);
         }
     	return $ret;
     }

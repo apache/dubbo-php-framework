@@ -29,6 +29,13 @@ class FSOFConstants
 	//monitor定时监控时间，暂定5分钟
 	const FSOF_MONITOR_TIMER = 300000;
 
-	//所使用的redis端口号
+	//默认所使用的redis端口号
 	const FSOF_SERVICE_REDIS_PORT =6379;
+    //默认所使用的redis地址
+	const FSOF_SERVICE_REDIS_HOST ='127.0.0.1';
+
+    const FSOF_SERVICE_REDIS_CONNECT_TYPE_TCP = 'TCP';
+
+    const FSOF_SERVICE_REDIS_CONNECT_TYPE_SOCK = 'SOCK';
+
 }
