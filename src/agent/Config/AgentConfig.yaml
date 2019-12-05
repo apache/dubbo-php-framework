@@ -1,0 +1,19 @@
+application:
+  name: "dubbo-agent"
+  log_dir: "./logs"
+  log_level: "INFO"
+  consumer_config_file: "../src/rpc/Config/ConsumerConfig.yaml"
+registry:
+  protocol: "zookeeper"
+  address: "127.0.0.1:2181"
+server:
+  host: "127.0.0.1"
+  port: "9091"
+  daemonize: 0
+  unixsocket: "/var/run/dubbo-php-framework/dubbo-agent.sock"
+  pid_file: "/var/run/dubbo-php-framework/dubbo-agent.pid"
+swoole_table:
+  size: 1000
+  column_size: 10240
+watch_nodes:
+  - "php.dubbo.demo.DemoService"

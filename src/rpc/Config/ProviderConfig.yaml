@@ -1,0 +1,28 @@
+swoole_settings:
+  reactor_num: 2
+  worker_num: 2
+  daemonize: 0
+parameter:
+  dubbo_version: "2.5.3"
+  client_ip: "127.0.0.1"
+application:
+  name: "simple-demo"
+  environment: "develop"
+  log_dir: "./logs"
+  log_level: "INFO"
+  pid_file: "/var/run/dubbo-php-framework/simple-monitor.pid"
+protocol:
+  host: "127.0.0.1"
+  port: "6380"
+  serialization: "hessian2"
+registry:
+  protocol: "zookeeper"
+  address: "127.0.0.1:2181"
+#monitor:
+#  protocol: "registry"
+#  service: "com.alibaba.dubbo.monitor.MonitorService"
+provider:
+  group:
+  version: ""
+service:
+  namespace: "DubboDemo\\Service\\"

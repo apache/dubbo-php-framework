@@ -1,6 +1,34 @@
 {
-    "require": {
-        "apache/log4php": "^2.3",
-        "crazyxman/hessian-parser": "dev-master"
+  "name": "crazyxman/dubbo-php-framework",
+  "type": "library",
+  "description": "This is a php implementation of the dubbo framework",
+  "keywords": [
+    "dubbo",
+    "dubbo-php",
+    "rpc",
+    "php-rpc"
+  ],
+  "homepage": "https://github.com/crazyxman/dubbo-php-framework",
+  "authors": [
+    {
+      "name": "crazyxman",
+      "email": "crazyxman01@gmail.com",
+      "homepage": "https://github.com/crazyxman"
     }
+  ],
+  "require": {
+    "php": ">=7.0.0",
+    "crazyxman/hessian-parser": ">=1.0.0",
+    "doctrine/annotations": "v1.8.0"
+  },
+  "autoload": {
+    "files": [
+      "src/rpc/Common/Helper/Functions.php"
+    ],
+    "psr-4": {
+      "Dubbo\\": "src/rpc",
+      "Dubbo\\Agent\\": "src/agent",
+      "DubboDemo\\": "demo"
+    }
+  }
 }
