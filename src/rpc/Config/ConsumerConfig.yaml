@@ -1,0 +1,32 @@
+discoverer:
+  host: "127.0.0.1"
+  port: "9091"
+  retry: 1
+  unixsocket: "/var/run/dubbo-php-framework/dubbo-agent.sock"
+application:
+  name: "simple-demo"
+  environment: "develop"
+  log_dir: "./logs"
+  log_level: "INFO"
+parameter:
+  version:
+  group:
+  retry: 0
+  timeout: 3
+reference:
+  - service_name: "php.dubbo.demo.DemoService"
+    url: ""
+    retry: 0
+    timeout: 3
+    query:
+      - group:
+        version:
+      - group: "*"
+        version: "1.0.0"
+  - service_name: "com.imooc.springboot.dubbo.demo.ObjectDemoService"
+  - service_name: "com.imooc.springboot.dubbo.demo.LinkedListDemoService"
+
+
+
+
+
