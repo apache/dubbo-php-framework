@@ -1,5 +1,19 @@
 notifications:
-    commits:      commits@dubbo.apache.org
-    issues:       notifications@dubbo.apache.org
-    pullrequests: notifications@dubbo.apache.org
-    jira_options: link label link label
+  commits: commits@dubbo.apache.org
+  issues: notifications@dubbo.apache.org
+  pullrequests: notifications@dubbo.apache.org
+  jira_options: link label link label
+github:
+  rulesets:
+    - name: "Default Branch Protection"
+      type: branch
+      branches:
+        includes:
+          - "~DEFAULT_BRANCH"
+          - "release/*"
+          - "rel/*"
+        excludes: []
+      bypass_teams:
+        - root
+      restrict_deletion: true
+      restrict_force_push: true
